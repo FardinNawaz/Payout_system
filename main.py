@@ -18,7 +18,7 @@ app.include_router(user_doc_router)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request,
-    exc: RequestValidationError,
+    exc: RequestValidationError
 ):
     return JSONResponse(
         status_code=400,
@@ -26,7 +26,7 @@ async def validation_exception_handler(
             "message": "Invalid request data",
             "errors": [
                 {
-                    "field": ".".join(str(item) for item in error["loc"]),
+                    "field": str(error["loc"][-1]),
                     "message": error["msg"],
                 }
                 for error in exc.errors()
