@@ -19,7 +19,7 @@ class BankDetails(BaseModel):
     def validate_account_number(cls, value:str) -> str:
         value=value.strip()
         if not value:
-            raise ValueError("Bank name cannot be empty")
+            raise ValueError("Account number cannot be empty")
         return value
 
     @field_validator("ifsc_code")
@@ -27,7 +27,7 @@ class BankDetails(BaseModel):
     def validate_ifsc_code(cls, value:str) -> str:
         value=value.strip()
         if not value:
-            raise ValueError("Bank name cannot be empty")
+            raise ValueError("ifsc code cannot be empty")
         return value
 
 
@@ -42,12 +42,13 @@ class UpiDetails(BaseModel):
             raise ValueError("Upi id cannot be empty")
         return value
 class BeneficiaryDetails(BaseModel):
+    beneficiary_name:str=Field(min_length=1,max_length=100)
     bank_accounts: list[BankDetails] =Field(default_factory=list)
     upi_accounts:list[UpiDetails]=Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_payment(self):
-        if not self.bank_accounts or not self.upi_accounts:
+        if not self.bank_accounts and not self.upi_accounts:
             raise ValueError("Provide atleast one account details")
         return self
      
@@ -61,10 +62,10 @@ class UpiAccountResponse(BaseModel):
     upi_id:str
 
 class BeneficiaryData(BaseModel):
-    beneficary_id:str
+    beneficiary_id:str
+    beneficiary_name:str
     bank_accounts:list[BankAccountResponse]
     upi_accounts:list[UpiAccountResponse]
 class BeneficiaryResponse(BaseModel):
     message:str
     data:BeneficiaryData
-    
