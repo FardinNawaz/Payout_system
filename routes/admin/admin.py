@@ -3,9 +3,9 @@ import jwt
 from fastapi import APIRouter, Header, HTTPException,Depends
 from models import User
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database import get_db
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from routes.auth.auth import  SECRET_KEY
 from routes.admin.model import CreateUser, CreateUserResponse
 
@@ -57,9 +57,15 @@ def check_admin(access_token: str, db: Session):
 @router.post("/users")
 def create_user(
     data: CreateUser,
-    access_token: str = Header(),
+    access_token: str| None = Header(default=None),
     db:Session=Depends(get_db)
 ):
+
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Access token is required"
+        )
 
     try:
         admin = check_admin(access_token, db)
@@ -93,7 +99,7 @@ def create_user(
             raise HTTPException(
                 status_code=409,
                 detail="Email already exists or a database constraint was violated"
-    )
+        )
 
         return {
                 "message": "User created successfully",

@@ -47,7 +47,6 @@ def add_payment_details(
             detail="Invalid token",
         )
 
-    # 2. Get email from token
     email = payload.get("email")
 
     if not email:
@@ -56,7 +55,7 @@ def add_payment_details(
             detail="Invalid token payload",
         )
 
-    # 3. Find user in database
+
     user = (
         db.query(User)
         .filter(User.email == email.lower())

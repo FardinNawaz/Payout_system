@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException,Depends
 from database import get_db
 from sqlalchemy.orm import Session
-from models import User
+from models import User,APICLIENT
 from routes.auth.models import (
     LoginRequest,
     LoginResponse,
@@ -46,14 +46,25 @@ def login(user: LoginRequest, db:Session=Depends(get_db)):
         SECRET_KEY,
         algorithm="HS256"
         )
+    api_client = (
+        db.query(APICLIENT)
+        .filter(APICLIENT.user_id == stored_user.user_id)
+        .first()
+    )
+
+    has_api_key = api_client is not None
         
     return {
             "message": "Login successful",
             "access_token": token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "has_api_key": has_api_key
             }
 
 
 @router.post("/logout")
 def logout():
     return {"message": "Logout successful"}
+
+
+

@@ -11,7 +11,7 @@ from pydantic import (
 
 class BankDetails(BaseModel):
     bank_name: str = Field(min_length=1, max_length=100)
-    account_number: str = Field(min_length=6, max_length=30)
+    account_number: str = Field(min_length=12, max_length=30)
     ifsc_code: str = Field(min_length=11, max_length=11)
 
     @field_validator("bank_name")
