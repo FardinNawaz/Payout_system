@@ -1,13 +1,14 @@
+
 import bcrypt
 import jwt
-from fastapi import APIRouter, Header, HTTPException,Depends
-from models import User
+from fastapi import APIRouter, Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from database import get_db
-from sqlalchemy import select
+
 from routes.auth.auth import  SECRET_KEY
-from routes.admin.model import CreateUser, CreateUserResponse
+from routes.admin.admin_model import Admin
+from routes.admin.schema import AdminCreate, AdminResponse
 
 router = APIRouter(
     prefix="/api/v1/admin",
@@ -28,35 +29,28 @@ def check_admin(access_token: str, db: Session):
             detail="Invalid token"
         )
 
-    email = payload.get("email")
+    admin_id = payload.get("sub")
 
-    if not email:
+    if not admin_id:
         raise HTTPException(
             status_code=401,
             detail="Invalid token payload"
         )
 
-    admin = db.scalars(
-        select(User).where(User.email == email.lower())
-    ).first()
+    admin = db.query(Admin).filter(Admin.admin_id==admin_id).first()
 
-    if admin is None:
+    if admin is None or not admin.is_active:
         raise HTTPException(
             status_code=403,
-            detail="Admin user not found"
+            detail="Admin not found or inactive"
         )
 
-    if admin.role != "ADMIN":
-        raise HTTPException(
-            status_code=403,
-            detail="Only admin can add users"
-        )
 
     return admin
 
-@router.post("/users")
+@router.post("/admins")
 def create_user(
-    data: CreateUser,
+    data: AdminCreate,
     access_token: str| None = Header(default=None),
     db:Session=Depends(get_db)
 ):
@@ -67,51 +61,37 @@ def create_user(
             detail="Access token is required"
         )
 
+    current_admin=check_admin(access_token,db)
+    email = str(data.email).lower()
+
+    existing_admin = db.query(Admin).filter(Admin.email==email).first()
+
+    if existing_admin:
+        raise HTTPException(
+            status_code=409,
+            detail="Admin email already exists"
+        )
+
+    new_admin = Admin(
+        name=data.name,
+        email=email,
+        phone=data.phone,
+        password_hash=bcrypt.hashpw(
+            data.password.encode("utf-8"),
+            bcrypt.gensalt()
+        ).decode("utf-8"),
+        is_active=True
+    )
+
     try:
-        admin = check_admin(access_token, db)
-        email = str(data.email).lower()
+        db.add(new_admin)
+        db.commit()
+        db.refresh(new_admin)
+        return new_admin
 
-        existing_user = (
-            db.query(User)
-            .filter(User.email == email)
-            .first()
-        )
-        if existing_user:
-            raise HTTPException(
-                status_code=409,
-                detail="Email already exists"
-            )
-
-        new_user = User(
-            name=data.name,
-            email=email,
-            password_hash=bcrypt.hashpw(
-                    data.password.encode(),
-                    bcrypt.gensalt()
-                ).decode(),
-                role=data.role
-        )
-        try:
-            db.add(new_user)
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-            raise HTTPException(
-                status_code=409,
-                detail="Email already exists or a database constraint was violated"
-        )
-
-        return {
-                "message": "User created successfully",
-                "created_by": admin.email,
-                "user": {
-                    "user_id": new_user.user_id,
-                    "name": new_user.name,
-                    "email": new_user.email,
-                    "role": new_user.role
-            }
-        }
-    except Exception:
+    except IntegrityError:
         db.rollback()
-        raise
-
+        raise HTTPException(
+            status_code=409,
+            detail="Admin email already exists"
+        )

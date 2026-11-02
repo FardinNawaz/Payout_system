@@ -2,18 +2,19 @@
 import os
 import bcrypt
 import jwt
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException,Depends
 from database import get_db
 from sqlalchemy.orm import Session
-from models import User,APICLIENT
-from routes.auth.models import (
-    LoginRequest,
-    LoginResponse,
-)
-load_dotenv()
+from routes.admin.admin_model import Admin
+from routes.auth.Schema import LoginRequest, LoginResponse
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY is missing")
@@ -21,50 +22,54 @@ if not SECRET_KEY:
 router = APIRouter(tags=["Auth"])
 
 
+
 @router.post("/login")
-def login(user: LoginRequest, db:Session=Depends(get_db)):
+def login(data: LoginRequest, db:Session=Depends(get_db)):
    
-    email=str(user.email).lower()
-    stored_user=(
-        db.query(User)
-        .filter(User.email==email)
+    email=str(data.email).lower()
+    admin=(
+        db.query(Admin)
+        .filter(Admin.email==email)
         .first()
     )
-    if not stored_user or not bcrypt.checkpw(
-        user.password.encode(),stored_user.password_hash.encode()):
-
+    if admin is None:
         raise HTTPException(
             status_code=401,
-            detail="Invalid Email or Password"
+            detail="Invalid email or password"
         )
-    
+    if not admin.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin account is inactive"
+        )
+    if not bcrypt.checkpw(
+        data.password.encode("utf-8"),
+        admin.password_hash.encode("utf-8")
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    now = datetime.now(timezone.utc)
+
     token = jwt.encode(
         {
-            "email": stored_user.email,
-            "role": stored_user.role
+            "sub": admin.admin_id,
+            "email": admin.email,
+            "type": "admin",
+            "exp": now + timedelta(hours=1)
         },
         SECRET_KEY,
         algorithm="HS256"
-        )
-    api_client = (
-        db.query(APICLIENT)
-        .filter(APICLIENT.user_id == stored_user.user_id)
-        .first()
     )
-
-    has_api_key = api_client is not None
         
     return {
-            "message": "Login successful",
-            "access_token": token,
-            "token_type": "bearer",
-            "has_api_key": has_api_key
-            }
+        "message": "Admin login successful",
+        "access_token": token,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/logout")
 def logout():
     return {"message": "Logout successful"}
-
-
-

@@ -3,7 +3,8 @@ import bcrypt
 from getpass import getpass
 
 from database import sessionLocal
-from models import User
+from routes.admin.admin_model import Admin
+
 
 db = sessionLocal()
 
@@ -11,33 +12,42 @@ try:
     email = input("Enter admin email: ").strip().lower()
     password = getpass("Enter admin password: ")
     name = input("Enter admin name: ").strip()
+    phone = input("Enter admin phone (optional): ").strip() or None
 
-    existing_user = (
-        db.query(User)
-        .filter(User.email == email)
+    if not email or not password or not name:
+        raise ValueError("Name, email, and password are required.")
+
+    if len(password) < 8:
+        raise ValueError("Password must contain at least 8 characters.")
+
+    existing_admin = (
+        db.query(Admin)
+        .filter(Admin.email == email)
         .first()
     )
 
-    if existing_user:
-        print("This email already exists.")
+    if existing_admin:
+        print("This admin email already exists.")
     else:
         hashed_password = bcrypt.hashpw(
-            password.encode(),
+            password.encode("utf-8"),
             bcrypt.gensalt()
-        ).decode()
+        ).decode("utf-8")
 
-        admin = User(
+        admin = Admin(
             name=name,
             email=email,
+            phone=phone,
             password_hash=hashed_password,
-            role="ADMIN"
+            is_active=True
         )
 
         db.add(admin)
         db.commit()
+        db.refresh(admin)
 
         print("Admin created successfully!")
-        print("Admin ID:", admin.user_id)
+        print("Admin ID:", admin.admin_id)
         print("Admin email:", admin.email)
 
 except Exception:
@@ -46,4 +56,3 @@ except Exception:
 
 finally:
     db.close()
-
