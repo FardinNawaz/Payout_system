@@ -1,11 +1,11 @@
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr,Field
 
 
 class RemitterResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    remitter_id: str
+    id: str=Field(validation_alias="remitter_id")
     org_id: str
     name: str
     email: EmailStr

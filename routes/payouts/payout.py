@@ -1,237 +1,292 @@
+import os
+import time
 import uuid
-import json
+import hmac
 import hashlib
-from fastapi import APIRouter, Depends,HTTPException,Header
+
+from decimal import Decimal
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException
+)
+
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-
+from cryptography.fernet import Fernet, InvalidToken
 from database import get_db
-from models import(
-    PAYOUT,
-    APICLIENT,
-    BankAccount,UPIAccount,IDEMPOTENCYKEY,
-    BENEFICIARY,BENEFICIARYBANKAccount,BENEFICIARYUPIAccount
+
+from routes.organization.organization_model import(
+    Organization,
+    OrganizationAPICredential,
+    OrganizationWallet
 )
-from services.api_auth import verify_api_request
-from routes.payouts.payouts_models import PayoutRequest,PayoutResponse
+
+from routes.remitter.remitter_models import Remitter
+
+from routes.organization.beneficiary.beneficiary_models import(
+    Beneficiary,BeneficiaryAccount
+)
+from routes.payouts.payouts_models import Payout
+from routes.payouts.payout_schema import PayoutRequest,PayoutResponse
 
 router=APIRouter(
     prefix="/api/v1/payouts",
     tags=["Payouts"]
 )
-@router.post("",response_model=PayoutResponse,status_code=201)
-async def create_payout(
-    data:PayoutRequest,
-    idempotency_key: str = Header(
-        ...,
-        alias="Idempotency-Key",
-        min_length=1,
-        max_length=255,
-    ),
-    api_client:APICLIENT=Depends(verify_api_request),
-    db:Session=Depends(get_db)
-):
-    user_id=api_client.user_id
-    request_json = json.dumps(
-    data.model_dump(mode="json"),
-    sort_keys=True,
-    separators=(",", ":"),
-    )
-    request_hash = hashlib.sha256(
-        request_json.encode("utf-8")
-    ).hexdigest()
+TIMESTAMP_TOLERANCE=300
 
-    existing_key = (
-        db.query(IDEMPOTENCYKEY)
+def authenticate_organization(
+    api_key: str,
+    timestamp: str,
+    signature: str,
+    message: str,
+    db: Session
+):
+    try:
+        request_timestamp = int(timestamp)
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid timestamp"
+        )
+
+    current_time=int(time.time())
+    if abs(current_time - request_timestamp) > TIMESTAMP_TOLERANCE:
+        raise HTTPException(
+            status_code=401,
+            detail="Request timestamp expired"
+        )
+    credentials = (
+        db.query(OrganizationAPICredential)
         .filter(
-            IDEMPOTENCYKEY.user_id == user_id,
-            IDEMPOTENCYKEY.idempotency_key == idempotency_key,
+            OrganizationAPICredential.api_key == api_key
+        )
+        .first()
+    )
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
+
+    organization = (
+        db.query(Organization)
+        .filter(
+            Organization.org_id == credentials.org_id
         )
         .first()
     )
 
-    if existing_key:
-        if existing_key.request_hash != request_hash:
-            raise HTTPException(
-                status_code=409,
-                detail="Idempotency-Key already used with different request details",
-            )
-
-        if not existing_key.payout_id:
-            raise HTTPException(
-                status_code=409,
-                detail="Request is still being processed",
-            )
-
-        original_payout = (
-            db.query(PAYOUT)
-            .filter(
-                PAYOUT.payout_id == existing_key.payout_id,
-                PAYOUT.user_id == user_id,
-            )
-            .first()
-        )
-
-        if original_payout is None:
-            raise HTTPException(
-                status_code=500,
-                detail="Original payout could not be found",
-            )
-
-        return original_payout
-    if data.payment_mode=="BANK":
-        if not data.sender_bank_id or  data.sender_upi_account_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide only sender_bank_id for BANK payments"
-            )
-        sender_account=(db.query(BankAccount)
-            .filter(
-                BankAccount.bank_id==data.sender_bank_id,
-                BankAccount.user_id==user_id
-            ).first()
-        )
-        if sender_account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Sender bank account not found"
-            )
-
-        if not data.beneficiary_bank_id or  data.beneficiary_upi_account_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide only beneficiary_bank_id for BANK payments"
-            )
-        destination=(
-            db.query(BENEFICIARYBANKAccount)
-            .join(
-                BENEFICIARY,
-                BENEFICIARY.beneficiary_id==BENEFICIARYBANKAccount.beneficiary_id
-            )
-            .filter(
-                BENEFICIARYBANKAccount.bank_id == data.beneficiary_bank_id,
-                BENEFICIARYBANKAccount.beneficiary_id == data.beneficiary_id,
-                BENEFICIARY.user_id == user_id
-            )
-            .first()
-        )
-
-    else:
-        if not data.sender_upi_account_id or data.sender_bank_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide only sender_upi_account_id for UPI payments"
-            )
-        sender_account=(
-            db.query(UPIAccount)
-            .filter(
-                UPIAccount.upi_account_id==data.sender_upi_account_id,
-                UPIAccount.user_id==user_id
-            ).first()
-        )
-        if sender_account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Sender Upi Account not found"
-            )
-        if not data.beneficiary_upi_account_id or data.beneficiary_bank_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide only beneficiary_upi_account_id for UPI payments"
-            )
-
-        destination=(
-            db.query(BENEFICIARYUPIAccount)
-            .join(
-                BENEFICIARY,
-                BENEFICIARY.beneficiary_id==BENEFICIARYUPIAccount.beneficiary_id
-            )
-            .filter(
-                BENEFICIARYUPIAccount.upi_account_id==data.beneficiary_upi_account_id,
-                BENEFICIARY.beneficiary_id==data.beneficiary_id,
-                BENEFICIARY.user_id==user_id
-            )
-            .first()
-        )
-    if destination is None:
+    if not organization or not organization.is_active:
         raise HTTPException(
-            status_code=404,
-            detail="Beneficiary or destination account not found",
+            status_code=403,
+            detail="Organization inactive or not found"
         )
 
-    # existing=(db.query(PAYOUT)
-    #     .filter(PAYOUT.reference_id==data.reference_id).first())
+    encryption_key = os.getenv("API_SECRET_ENCRYPTION_KEY")
+
+    if not encryption_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Encryption key not configured"
+        )
+
+    try:
+        cipher = Fernet(encryption_key.encode())
+
+        api_secret = cipher.decrypt(
+            credentials.api_secret.encode()
+        ).decode()
+
+    except (InvalidToken):
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to decrypt API secret"
+        )
+
+    expected_signature = hmac.new(
+        api_secret.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()
 
 
-    # if existing:
-    #     raise HTTPException(
-    #         status_code=409,
-    #         detail="Reference ID already used",
-    #     )
+    if not hmac.compare_digest(
+        expected_signature,
+        signature
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid signature"
+        )
 
-    reference_id = f"REF-{uuid.uuid4().hex}"
-    payout = PAYOUT(
-        user_id=user_id,
-        beneficiary_id=data.beneficiary_id,
-        sender_bank_id=data.sender_bank_id,
-        sender_upi_account_id=data.sender_upi_account_id,
-        beneficiary_bank_id=data.beneficiary_bank_id,
-        beneficiary_upi_account_id=data.beneficiary_upi_account_id,
-        reference_id=reference_id,
-        amount=data.amount,
-        currency=data.currency,
-        payment_mode=data.payment_mode,
-        status="PENDING",
-    )
+    return organization
 
-    key_record = IDEMPOTENCYKEY(
-        user_id=user_id,
-        idempotency_key=idempotency_key,
-        request_hash=request_hash,
+@router.post(
+    "",
+    response_model=PayoutResponse,
+    status_code=201
+)
+def create_payout(
+    data:PayoutRequest,
+
+    api_key:str=Header(...,alias="X-API-KEY"),
+    timestamp: str = Header(..., alias="X-TIMESTAMP"),
+    signature: str = Header(..., alias="X-SIGNATURE"),
+    
+    db: Session = Depends(get_db)
+):
+    amount = data.amount
+    path = "/api/v1/payouts"
+    message_parts = [
+        timestamp,
+        "POST",
+        path,
+        api_key,
+        data.remitter_id,
+        data.beneficiary_id,
+        data.account_id,
+        format(amount, ".2f"),
+        data.currency,
+        data.payment_mode
+    ]
+    message = "\n".join(message_parts)
+
+    organization = authenticate_organization(
+        api_key=api_key,
+        timestamp=timestamp,
+        signature=signature,
+        message=message,
+        db=db
     )
 
     try:
-        db.add(payout)
-        db.flush()
-
-        key_record.payout_id = payout.payout_id
-        db.add(key_record)
-
-        db.commit()
-        db.refresh(payout)
-    except IntegrityError:
-        db.rollback()
-        concurrent_key = (
-            db.query(IDEMPOTENCYKEY)
+        remitter = (
+            db.query(Remitter)
             .filter(
-                IDEMPOTENCYKEY.user_id == user_id,
-                IDEMPOTENCYKEY.idempotency_key == idempotency_key,
+                Remitter.remitter_id == data.remitter_id,
+                Remitter.org_id == organization.org_id,
+                Remitter.is_active.is_(True)
+            )
+            .first()
+        )
+        if not remitter:
+            raise HTTPException(
+                status_code=404,
+                detail="Remitter not found or inactive"
+            )
+
+        beneficiary = (
+            db.query(Beneficiary)
+            .filter(
+                Beneficiary.beneficiary_id == data.beneficiary_id,
+                Beneficiary.remitter_id == remitter.remitter_id
             )
             .first()
         )
 
-        if concurrent_key:
-            if concurrent_key.request_hash != request_hash:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Idempotency-Key already used with different request details",
-                )
+        if not beneficiary:
+            raise HTTPException(
+                status_code=404,
+                detail="Beneficiary not found for this remitter"
+            )
 
-            if concurrent_key.payout_id:
-                original_payout = (
-                    db.query(PAYOUT)
-                    .filter(
-                        PAYOUT.payout_id == concurrent_key.payout_id,
-                        PAYOUT.user_id == user_id,
-                    )
-                    .first()
-                )
-                if original_payout:
-                    return original_payout
+        destination = (
+            db.query(BeneficiaryAccount)
+            .filter(
+                BeneficiaryAccount.account_id == data.account_id,
+                BeneficiaryAccount.beneficiary_id == beneficiary.beneficiary_id
+            )
+            .first()
+        )
+
+        if not destination:
+            raise HTTPException(
+                status_code=404,
+                detail="Beneficiary account not found"
+            )
+
+        if destination.account_type != data.payment_mode:
+            raise HTTPException(
+                status_code=400,
+                detail="Payment mode does not match beneficiary account type"
+            )
+
+        wallet = (
+            db.query(OrganizationWallet)
+            .filter(
+                OrganizationWallet.org_id == organization.org_id
+            )
+            .first()
+        )
+
+        if not wallet:
+            raise HTTPException(
+                status_code=404,
+                detail="Organization wallet not found"
+            )
+
+
+        if not wallet.is_active:
+            raise HTTPException(
+                status_code=403,
+                detail="Organization wallet is inactive"
+            )
+
+        if wallet.currency != data.currency:
+            raise HTTPException(
+                status_code=400,
+                detail="Wallet currency does not match payout currency"
+            )
+
+        if wallet.balance < amount:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient wallet balance"
+            )
+
+
+        payout = Payout(
+            org_id=organization.org_id,
+            wallet_id=wallet.wallet_id,
+            remitter_id=remitter.remitter_id,
+            beneficiary_id=beneficiary.beneficiary_id,
+            account_id=destination.account_id,
+            amount=amount,
+            currency=data.currency,
+            payment_mode=data.payment_mode,
+            status="PENDING"
+        )
+
+        db.add(payout)
+        db.commit()
+        db.refresh(payout)
+
+        return payout
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except IntegrityError as e:
+        db.rollback()
+
+        print("PAYOUT INTEGRITY ERROR:", repr(e))
 
         raise HTTPException(
             status_code=409,
-            detail="Database conflict; retry with the same Idempotency-Key",
+            detail="Payout database conflict"
         )
 
-    return payout
+    except Exception as e:
+        db.rollback()
+
+        import traceback
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create payout"
+        )

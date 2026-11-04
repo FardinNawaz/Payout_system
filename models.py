@@ -147,122 +147,122 @@ class DOCUMENT(Base):
         nullable=False
     )
 
-class BENEFICIARY(Base):
-    __tablename__="beneficiariess"
+# class BENEFICIARY(Base):
+#     __tablename__="beneficiariess"
 
-    beneficiary_id:Mapped[str]=mapped_column(
-        String(36),
-        primary_key=True,
-        default=lambda :str(uuid.uuid4())
-    )
+#     beneficiary_id:Mapped[str]=mapped_column(
+#         String(36),
+#         primary_key=True,
+#         default=lambda :str(uuid.uuid4())
+#     )
 
-    user_id:Mapped[str]=mapped_column(
-        String(36),
-        ForeignKey("users.user_id"),
-        nullable=False,
-        index=True
-    )
+#     user_id:Mapped[str]=mapped_column(
+#         String(36),
+#         ForeignKey("users.user_id"),
+#         nullable=False,
+#         index=True
+#     )
 
-    beneficiary_name:Mapped[str]=mapped_column(
-        String(100),
-        nullable=False
-    )
+#     beneficiary_name:Mapped[str]=mapped_column(
+#         String(100),
+#         nullable=False
+#     )
 
-class BENEFICIARYBANKAccount(Base):
-    __tablename__="beneficiary_bank_account"
+# class BENEFICIARYBANKAccount(Base):
+#     __tablename__="beneficiary_bank_account"
 
-    __table_args__=(
-        UniqueConstraint(
-            "beneficiary_id",
-            "account_number",
-            name="uq_beneficairy_bank"
-        ),
-    )
+#     __table_args__=(
+#         UniqueConstraint(
+#             "beneficiary_id",
+#             "account_number",
+#             name="uq_beneficairy_bank"
+#         ),
+#     )
 
-    bank_id:Mapped[str]=mapped_column(
-        String(50),
-        primary_key=True,
-        default=lambda :str(uuid.uuid4())
-    )
+#     bank_id:Mapped[str]=mapped_column(
+#         String(50),
+#         primary_key=True,
+#         default=lambda :str(uuid.uuid4())
+#     )
 
-    beneficiary_id:Mapped[str]=mapped_column(
-        String(36),
-        ForeignKey("beneficiaries.beneficiary_id"),
-        nullable=False,
-        index=True
-    )
+#     beneficiary_id:Mapped[str]=mapped_column(
+#         String(36),
+#         ForeignKey("beneficiaries.beneficiary_id"),
+#         nullable=False,
+#         index=True
+#     )
 
-    bank_name:Mapped[str]=mapped_column(
-        String(50),
-        nullable=False
-    )
+#     bank_name:Mapped[str]=mapped_column(
+#         String(50),
+#         nullable=False
+#     )
 
-    account_number:Mapped[str]=mapped_column(
-        String(100),
-        nullable=False
-    )
+#     account_number:Mapped[str]=mapped_column(
+#         String(100),
+#         nullable=False
+#     )
 
-    ifsc_code:Mapped[str]=mapped_column(
-        String(50),
-        nullable=False
-    )
+#     ifsc_code:Mapped[str]=mapped_column(
+#         String(50),
+#         nullable=False
+#     )
 
-class BENEFICIARYUPIAccount(Base):
-    __tablename__="beneficiary_upi_account"
-    __table_args__=(
-        UniqueConstraint(
-            "beneficiary_id",
-            "upi_id",
-            name="uq_beneficiary_upi"
-        ),
-     )
+# class BENEFICIARYUPIAccount(Base):
+#     __tablename__="beneficiary_upi_account"
+#     __table_args__=(
+#         UniqueConstraint(
+#             "beneficiary_id",
+#             "upi_id",
+#             name="uq_beneficiary_upi"
+#         ),
+#      )
 
-    upi_account_id:Mapped[str]=mapped_column(
-        String(36),
-        primary_key=True,
-        default=lambda :str(uuid.uuid4())
-    )
+#     upi_account_id:Mapped[str]=mapped_column(
+#         String(36),
+#         primary_key=True,
+#         default=lambda :str(uuid.uuid4())
+#     )
 
-    beneficiary_id:Mapped[str]=mapped_column(
-        String(36),
-        ForeignKey("beneficiaries.beneficiary_id"),
-        nullable=False,
-        index=True
-    )
+#     beneficiary_id:Mapped[str]=mapped_column(
+#         String(36),
+#         ForeignKey("beneficiaries.beneficiary_id"),
+#         nullable=False,
+#         index=True
+#     )
 
-    upi_id:Mapped[str]=mapped_column(
-        String(15),
-        nullable=False
-    )
+#     upi_id:Mapped[str]=mapped_column(
+#         String(15),
+#         nullable=False
+#     )
 
-class APICLIENT(Base):
-    __tablename__="api_client"
+# class APICLIENT(Base):
+#     __tablename__="api_client"
 
-    user_id:Mapped[str]=mapped_column(
-        String(36),
-        ForeignKey("users.user_id"),
-        primary_key=True
-    )
-    api_key:Mapped[str]=mapped_column(
-        String(100),
-        unique=True,
-        nullable=False,
-        index=True
-    )
-    api_secret:Mapped[str]=mapped_column(
-        String(255),
-        nullable=False
-    )
+#     user_id:Mapped[str]=mapped_column(
+#         String(36),
+#         ForeignKey("users.user_id"),
+#         primary_key=True
+#     )
+#     api_key:Mapped[str]=mapped_column(
+#         String(100),
+#         unique=True,
+#         nullable=False,
+#         index=True
+#     )
+#     api_secret:Mapped[str]=mapped_column(
+#         String(255),
+#         nullable=False
+#     )
 
-    webhook_url:Mapped[str]=mapped_column(
-        String(500),
-        nullable=False 
-    )
+#     webhook_url:Mapped[str]=mapped_column(
+#         String(500),
+#         nullable=False 
+#     )
 
-    webhook_secret:Mapped[str]=mapped_column(
-        String(255),
-        nullable=False
-    )
+#     webhook_secret:Mapped[str]=mapped_column(
+#         String(255),
+#         nullable=False
+#     )
 
 class PAYOUT(Base):
     __tablename__="payouts"
