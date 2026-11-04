@@ -111,7 +111,7 @@ class BeneficiaryResponse(BaseModel):
 class BeneficiaryAccountResponse(BaseModel):
 
     account_id: str
-    id: str 
+    id: str = Field(validation_alias="beneficiary_id")
     account_type: str
     account_number: str | None
     ifsc_code: str | None

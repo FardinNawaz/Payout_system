@@ -12,7 +12,7 @@ from fastapi import (
     Header,
     HTTPException
 )
-
+from routes.payouts.escrowstack import send_bank_payout
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from cryptography.fernet import Fernet, InvalidToken
@@ -106,6 +106,7 @@ def authenticate_organization(
             status_code=500,
             detail="Unable to decrypt API secret"
         )
+        
 
     expected_signature = hmac.new(
         api_secret.encode(),
@@ -265,7 +266,20 @@ def create_payout(
         db.commit()
         db.refresh(payout)
 
+        if data.payment_mode == "BANK":
+            gateway_response = send_bank_payout(
+                payout,
+                beneficiary,
+                destination
+            )
+
+            print("EscrowStack response:", gateway_response)
+
         return payout
+
+
+
+      
     except HTTPException:
         db.rollback()
         raise
