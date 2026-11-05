@@ -94,7 +94,7 @@ def create_organization_wallet(
             status_code=401,
             detail="Access token is required"
         )
-
+    
     current_admin = check_admin(access_token, db)
 
     organization = db.query(Organization).filter(
@@ -202,7 +202,7 @@ def create_organization_api_credentials(
         db.commit()
 
         return OrganizationAPICredentialResponse(
-            org_id=org_id,
+            id=org_id,
             api_key=api_key,
             api_secret=api_secret
         )
@@ -250,7 +250,7 @@ def configure_organization_webhook(
             status_code=404,
             detail="Organization not found"
         )
-
+    
     credentials = db.query(
         OrganizationAPICredential
     ).filter(
@@ -290,7 +290,7 @@ def configure_organization_webhook(
         db.refresh(credentials)
 
         return OrganizationWebhookResponse(
-            org_id=org_id,
+            id=org_id,
             webhook_url=data.webhook_url,
             webhook_secret=webhook_secret
         )
@@ -357,16 +357,20 @@ def credit_organization_wallet(
         db.refresh(wallet)
 
         return OrganizationWalletCreditResponse(
-            org_id=org_id,
+            id=org_id,
             previous_balance=previous_balance,
             credited_amount=credited_amount,
             current_balance=wallet.balance,
             description=data.description
         )
 
-    except Exception:
+    except Exception as e:
         db.rollback()
+
+        import traceback
+        traceback.print_exc()
+
         raise HTTPException(
             status_code=500,
-            detail="Failed to credit organization wallet"
+            detail=f"Failed to credit organization wallet: {str(e)}"
         )

@@ -15,6 +15,7 @@ from fastapi import (
     File,
     Form
 )
+from pydantic import EmailStr
 
 from sqlalchemy.orm import Session
 
@@ -147,7 +148,7 @@ def authenticate_organization(
 @router.post("/")
 async def create_remitter(
     name: str = Form(...),
-    email: str = Form(...),
+    email: EmailStr = Form(...),
     phone: str = Form(...),
     document_type: str = Form(...),
     document_number: str = Form(""),
@@ -262,7 +263,7 @@ async def create_remitter(
 
         return {
             "message": "Remitter registered successfully",
-            "remitter_id": new_remitter.remitter_id,
+            "id": new_remitter.remitter_id,
             "org_id": organization.org_id,
             "document_id": new_document.document_id
         }

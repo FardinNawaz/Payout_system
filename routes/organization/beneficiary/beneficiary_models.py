@@ -40,7 +40,7 @@ class Beneficiary(Base):
     )
 
     phone: Mapped[str] = mapped_column(
-        String(20),
+        String(10),
         nullable=False
     )
 

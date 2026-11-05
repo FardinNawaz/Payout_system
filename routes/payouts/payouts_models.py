@@ -1,31 +1,77 @@
+import uuid
+from datetime import datetime
 from decimal import Decimal
-from typing import Literal
-from pydantic import BaseModel, Field, ConfigDict
 
-class PayoutRequest(BaseModel):
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    Numeric,
+    DateTime,
+)
+from sqlalchemy.orm import Mapped, mapped_column
 
-    amount: Decimal = Field(
-        gt=0,
-        max_digits=12,
-        decimal_places=2
+from database import Base
+
+
+class Payout(Base):
+    __tablename__ = "payouts"
+
+    payout_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
     )
-    currency: Literal["INR"] = "INR"
-    payment_mode: Literal["BANK", "UPI"]
 
-    sender_bank_id: str | None = None
-    sender_upi_account_id: str | None = None
+    org_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.org_id"),
+        nullable=False,
+        index=True
+    )
 
-    beneficiary_id: str
-    beneficiary_bank_id: str | None = None
-    beneficiary_upi_account_id: str | None = None
+    wallet_id: Mapped[str] = mapped_column(
+        ForeignKey("organization_wallets.wallet_id"),
+        nullable=False
+    )
 
-class PayoutResponse(BaseModel):
-    payout_id: str
-    reference_id: str
-    beneficiary_id: str
-    amount: Decimal
-    currency: str
-    payment_mode: str
-    status: str
+    remitter_id: Mapped[str] = mapped_column(
+        ForeignKey("remitters.remitter_id"),
+        nullable=False
+    )
 
-    model_config = ConfigDict(from_attributes=True)
+    beneficiary_id: Mapped[str] = mapped_column(
+        ForeignKey("beneficiaries.beneficiary_id"),
+        nullable=False
+    )
+
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("beneficiary_accounts.account_id"),
+        nullable=False
+    )
+
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2),
+        nullable=False
+    )
+
+    currency: Mapped[str] = mapped_column(
+        String(3),
+        default="INR",
+        nullable=False
+    )
+
+    payment_mode: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="PENDING",
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
