@@ -1,0 +1,35 @@
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-title h2 {
+  color: #172554;
+  font-size: 22px;
+}
+
+.header-title p {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+
+.admin-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #172554;
+  font-weight: 600;
+}
