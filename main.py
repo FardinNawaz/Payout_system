@@ -9,14 +9,12 @@ from routes.organization.organization import router as create_organization
 from routes.organization.users.organization_user import router as organization_user_router
 from routes.remitter.remitter import router as org_remitter
 from routes.organization.auth.organization_auth import router as auth_organiation
-# from routes.organization.beneficiary.beneficiary import router as org_beneficiary
+from routes.organization.beneficiary.beneficiary import router as org_beneficiary
+from routes.payouts.payout import router as create_payout
 
 
 app = FastAPI(
     title="Payout System API",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url="/openapi.json",
 )
 
 
@@ -26,7 +24,8 @@ app.include_router(create_organization)
 app.include_router(organization_user_router)
 app.include_router(org_remitter)
 app.include_router( auth_organiation)
-# app.include_router(org_beneficiary)
+app.include_router(org_beneficiary)
+app.include_router(create_payout)
 
 
 @app.exception_handler(HTTPException)

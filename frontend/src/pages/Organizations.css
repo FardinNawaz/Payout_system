@@ -1,0 +1,213 @@
+
+.organizations-content {
+  padding: 30px;
+}
+
+.organizations-heading {
+  margin-bottom: 25px;
+}
+
+.organizations-heading h1 {
+  color: #172554;
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.organizations-heading p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.organizations-toolbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.organization-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 400px;
+  padding: 12px 15px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+}
+
+.organization-search input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.organizations-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.organizations-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.organizations-table th,
+.organizations-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.organizations-table th {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.organizations-table td {
+  color: #334155;
+}
+
+.organization-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #172554;
+  font-weight: 600;
+}
+
+.organization-status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.organization-status.active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.organization-status.inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+@media (max-width: 600px) {
+  .organizations-content {
+    padding: 15px;
+  }
+
+  .organization-search {
+    width: 100%;
+  }
+}
+.add-organization-btn {
+  padding: 11px 18px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.organization-form-card {
+  background: white;
+  padding: 25px;
+  margin-bottom: 25px;
+  border-radius: 12px;
+}
+
+.organization-form-card h2 {
+  margin-bottom: 20px;
+  color: #172554;
+}
+
+.organization-form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 450px;
+}
+
+.organization-form-card input {
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+}
+
+.organization-form-card button {
+  padding: 12px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.success-message {
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.credentials-card {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+
+.success-message {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-size: 14px;
+}
+
+.error-message {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-size: 14px;
+}
+/* Arrange action buttons vertically */
+.organization-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+/* Style both action buttons */
+.organization-actions .add-organization-btn {
+  width: 230px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+/* Button hover effect */
+.organization-actions .add-organization-btn:hover {
+  background: #1d4ed8;
+}
+

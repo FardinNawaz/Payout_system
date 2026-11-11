@@ -1,0 +1,23 @@
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 30px;
+  background-color: #f1f5f9;
+}
+
+.main-content h1 {
+  color: #172554;
+  margin-bottom: 10px;
+}
+
+.main-content p {
+  color: #64748b;
+}
+.dashboard-content {
+  padding: 30px;
+}
